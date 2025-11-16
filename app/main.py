@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from app.db import engine, Base
 from app import models, schemas  # Import models to register them with Base
+from app.api import stations, trains, segments
 
 
 @asynccontextmanager
@@ -19,6 +20,15 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+# API v1 router
+api_v1_router = APIRouter(prefix="/api/v1")
+api_v1_router.include_router(stations.router)
+api_v1_router.include_router(trains.router)
+api_v1_router.include_router(segments.router)
+
+# Include the v1 router in the app
+app.include_router(api_v1_router)
 
 
 @app.get("/health", response_model=schemas.HealthCheckResponse)

@@ -40,6 +40,11 @@ env/
 # Database
 *.db
 *.sqlite3
+# Test databases
+test_*.db
+test_*.db-journal
+test_*.db-wal
+test_*.db-shm
 
 # Testing
 .pytest_cache/
