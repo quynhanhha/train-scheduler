@@ -12,7 +12,7 @@ def init_database():
     """Create all database tables."""
     print("Creating database tables...")
     Base.metadata.create_all(bind=engine)
-    print("✓ Database tables created successfully!")
+    print("Database tables created successfully.")
     print("\nTables created:")
     print("  - stations")
     print("  - trains")

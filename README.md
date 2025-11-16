@@ -35,8 +35,14 @@ train-scheduler/
 
 3. **Run the application:**
    ```bash
+   # Option 1: Using the startup script
+   ./run.sh
+   
+   # Option 2: Using uvicorn directly
    uvicorn app.main:app --reload
    ```
+   
+   **Important:** Always run from the project root directory (`train scheduler/`), not from inside the `app/` folder.
 
 4. **Access the API:**
    - API: http://localhost:8000

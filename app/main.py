@@ -1,21 +1,27 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.db import engine, Base
-from app import models  # Import models to register them with Base
+from app import models, schemas  # Import models to register them with Base
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler - runs on startup and shutdown."""
+    # Startup: Create database tables
+    Base.metadata.create_all(bind=engine)
+    yield
+    # Shutdown: cleanup would go here if needed
+
 
 app = FastAPI(
     title="Train Scheduler API",
     description="Railway scheduling system with time-based conflict detection",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 
-@app.on_event("startup")
-def startup_event():
-    """Create database tables on startup."""
-    Base.metadata.create_all(bind=engine)
-
-
-@app.get("/health")
+@app.get("/health", response_model=schemas.HealthCheckResponse)
 def health_check():
     """Health check endpoint."""
     return {"status": "ok"}
