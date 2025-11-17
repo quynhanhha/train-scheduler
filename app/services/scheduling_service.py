@@ -30,6 +30,34 @@ class ConflictError(SchedulingError):
         super().__init__(f"Scheduling conflicts detected: {len(conflicts)} conflict(s)")
 
 
+def validate_trip_references(db: Session, trip_data: ScheduledTripCreate) -> None:
+    """
+    Validate that train and track segments referenced in trip data exist.
+    
+    Args:
+        db: Database session
+        trip_data: Trip data to validate
+        
+    Raises:
+        ValidationError: If train or segments don't exist
+    """
+    # Validate train exists
+    train = db.query(Train).filter(Train.id == trip_data.train_id).first()
+    if not train:
+        raise ValidationError(f"Train with id {trip_data.train_id} not found")
+    
+    # Validate all track segments exist
+    segment_ids = [seg.track_segment_id for seg in trip_data.segments]
+    track_segments = db.query(TrackSegment).filter(
+        TrackSegment.id.in_(segment_ids)
+    ).all()
+    
+    found_ids = {ts.id for ts in track_segments}
+    missing_ids = set(segment_ids) - found_ids
+    if missing_ids:
+        raise ValidationError(f"Track segments not found: {sorted(missing_ids)}")
+
+
 def find_conflicts(
     db: Session, 
     trip_data: ScheduledTripCreate,
@@ -136,21 +164,8 @@ def create_trip(db: Session, trip_data: ScheduledTripCreate) -> ScheduledTrip:
         ValidationError: If validation fails
         ConflictError: If scheduling conflicts are detected
     """
-    # Validate train exists
-    train = db.query(Train).filter(Train.id == trip_data.train_id).first()
-    if not train:
-        raise ValidationError(f"Train with id {trip_data.train_id} not found")
-    
-    # Validate all track segments exist
-    segment_ids = [seg.track_segment_id for seg in trip_data.segments]
-    track_segments = db.query(TrackSegment).filter(
-        TrackSegment.id.in_(segment_ids)
-    ).all()
-    
-    found_ids = {ts.id for ts in track_segments}
-    missing_ids = set(segment_ids) - found_ids
-    if missing_ids:
-        raise ValidationError(f"Track segments not found: {sorted(missing_ids)}")
+    # Validate train and track segment references
+    validate_trip_references(db, trip_data)
     
     # Validate times for each segment (departure < arrival)
     for i, segment in enumerate(trip_data.segments):

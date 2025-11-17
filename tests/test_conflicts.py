@@ -3,64 +3,8 @@ Tests for conflict detection on single-track segments.
 """
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from datetime import datetime
-import os
 
-from app.main import app
-from app.db import Base, get_db
-from app import models
-
-# Test database setup
-TEST_DATABASE_URL = "sqlite:///./test_conflicts.db"
-engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Create all tables once
-Base.metadata.create_all(bind=engine)
-
-
-def override_get_db():
-    """Override database dependency for testing."""
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
-
-
-@pytest.fixture(scope="module", autouse=True)
-def setup_test_database():
-    """Create tables once for all tests in this module."""
-    Base.metadata.create_all(bind=engine)
-    yield
-    Base.metadata.drop_all(bind=engine)
-    if os.path.exists("./test_conflicts.db"):
-        os.remove("./test_conflicts.db")
-
-
-@pytest.fixture(autouse=True)
-def clean_database():
-    """Clean all tables before each test."""
-    session = TestingSessionLocal()
-    try:
-        for table in reversed(Base.metadata.sorted_tables):
-            session.execute(table.delete())
-        session.commit()
-    finally:
-        session.close()
-    yield
-
-
-@pytest.fixture
-def client():
-    """Create a test client."""
-    return TestClient(app)
+# Core fixtures (client, setup_test_database, clean_database) are automatically loaded from conftest.py
 
 
 @pytest.fixture

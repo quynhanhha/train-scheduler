@@ -53,9 +53,6 @@ def create_segment(segment: TrackSegmentCreate, db: Session = Depends(get_db)):
     db.add(db_segment)
     db.commit()
     db.refresh(db_segment)
-    
-    # Load relationships for response
-    db.refresh(db_segment)
     return db_segment
 
 
@@ -105,9 +102,6 @@ def update_segment(
         setattr(db_segment, field, value)
     
     db.commit()
-    db.refresh(db_segment)
-    
-    # Load relationships for response
     db.refresh(db_segment)
     return db_segment
 

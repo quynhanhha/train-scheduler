@@ -13,42 +13,42 @@ if [[ -z "$VIRTUAL_ENV" ]]; then
 fi
 
 # Run tests by category for better isolation
-echo "Running Model Tests..."
+echo "Running Model Tests"
 pytest tests/test_models.py -v --tb=short
 MODEL_RESULT=$?
 
 echo ""
-echo "Running Schema Tests..."
+echo "Running Schema Tests"
 pytest tests/test_schemas.py -v --tb=short
 SCHEMA_RESULT=$?
 
 echo ""
-echo "Running Health Check Test..."
+echo "Running Health Check Test"
 pytest tests/test_main.py -v --tb=short
 MAIN_RESULT=$?
 
 echo ""
-echo "Running Train API Tests..."
+echo "Running Train API Tests"
 pytest tests/test_api_trains.py -v --tb=short
 TRAIN_RESULT=$?
 
 echo ""
-echo "Running Station API Tests..."
+echo "Running Station API Tests"
 pytest tests/test_api_stations.py -v --tb=short
 STATION_RESULT=$?
 
 echo ""
-echo "Running Track Segment API Tests..."
+echo "Running Track Segment API Tests"
 pytest tests/test_api_segments.py -v --tb=short
 SEGMENT_RESULT=$?
 
 echo ""
-echo "Running Trip API Tests..."
+echo "Running Trip API Tests"
 pytest tests/test_api_trips.py -v --tb=short
 TRIP_RESULT=$?
 
 echo ""
-echo "Running Conflict Detection Tests..."
+echo "Running Conflict Detection Tests"
 pytest tests/test_conflicts.py -v --tb=short
 CONFLICT_RESULT=$?
 

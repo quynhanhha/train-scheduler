@@ -3,63 +3,8 @@ Tests for track segment API endpoints.
 """
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from app.main import app
-from app.db import Base, get_db
-from app import models 
-
-
-# Test database setup
-# Use file-based database for testing
-TEST_DATABASE_URL = "sqlite:///./test_segments.db"
-engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def override_get_db():
-    """Override database dependency for testing."""
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
-
-
-@pytest.fixture(scope="module", autouse=True)
-def setup_test_database():
-    """Create tables once for all tests in this module."""
-    Base.metadata.create_all(bind=engine)
-    yield
-    Base.metadata.drop_all(bind=engine)
-    # Clean up test database file
-    import os
-    if os.path.exists("./test_segments.db"):
-        os.remove("./test_segments.db")
-
-
-@pytest.fixture(autouse=True)
-def clean_database():
-    """Clean all tables before each test."""
-    session = TestingSessionLocal()
-    try:
-        for table in reversed(Base.metadata.sorted_tables):
-            session.execute(table.delete())
-        session.commit()
-    finally:
-        session.close()
-    yield
-
-
-@pytest.fixture
-def client():
-    """Create a test client."""
-    return TestClient(app)
+# Core fixtures (client, setup_test_database, clean_database) are automatically loaded from conftest.py
 
 
 @pytest.fixture

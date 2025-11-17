@@ -4,62 +4,8 @@ Tests for trip API endpoints.
 
 import pytest
 from datetime import datetime, timedelta
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from app.main import app
-from app.db import Base, get_db
-from app import models
-
-
-# Test database setup
-TEST_DATABASE_URL = "sqlite:///./test_trips.db"
-engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def override_get_db():
-    """Override database dependency for testing."""
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
-
-
-@pytest.fixture(scope="module", autouse=True)
-def setup_test_database():
-    """Create tables once for all tests in this module."""
-    Base.metadata.create_all(bind=engine)
-    yield
-    Base.metadata.drop_all(bind=engine)
-    # Clean up test database file
-    import os
-    if os.path.exists("./test_trips.db"):
-        os.remove("./test_trips.db")
-
-
-@pytest.fixture(autouse=True)
-def clean_database():
-    """Clean all tables before each test."""
-    session = TestingSessionLocal()
-    try:
-        for table in reversed(Base.metadata.sorted_tables):
-            session.execute(table.delete())
-        session.commit()
-    finally:
-        session.close()
-    yield
-
-
-@pytest.fixture
-def client():
-    """Create a test client."""
-    return TestClient(app)
+# Core fixtures (client, setup_test_database, clean_database) are automatically loaded from conftest.py
 
 
 @pytest.fixture
@@ -462,4 +408,183 @@ def test_delete_trip_cascades_to_segments(client, test_data):
     # Try to get segments - trip should not exist
     response = client.get(f"/api/v1/trips/{trip_id}/segments")
     assert response.status_code == 404
+
+
+# ============================================================================
+# Conflict Check Endpoint Tests
+# ============================================================================
+
+def test_check_conflicts_no_conflicts(client, test_data):
+    """Test conflict check endpoint with no conflicts."""
+    # Propose a trip with no conflicts
+    trip_data = {
+        "train_id": test_data["train"],
+        "segments": [
+            {
+                "track_segment_id": test_data["segments"]["ab"],
+                "departure_time": "2025-01-01T10:00:00",
+                "arrival_time": "2025-01-01T11:00:00"
+            }
+        ]
+    }
+    
+    response = client.post("/api/v1/trips/conflicts/check", json=trip_data)
+    
+    assert response.status_code == 200
+    data_response = response.json()
+    assert "conflicts" in data_response
+    assert data_response["conflicts"] == []
+
+
+def test_check_conflicts_with_conflicts(client, test_data):
+    """Test conflict check endpoint when conflicts exist."""
+    # First, create an actual trip
+    trip1_data = {
+        "train_id": test_data["train"],
+        "segments": [
+            {
+                "track_segment_id": test_data["segments"]["ab"],
+                "departure_time": "2025-01-01T10:00:00",
+                "arrival_time": "2025-01-01T11:00:00"
+            }
+        ]
+    }
+    
+    create_response = client.post("/api/v1/trips", json=trip1_data)
+    assert create_response.status_code == 201
+    trip1_id = create_response.json()["id"]
+    
+    # Now check for conflicts with an overlapping trip (without creating it)
+    trip2_data = {
+        "train_id": test_data["train"],
+        "segments": [
+            {
+                "track_segment_id": test_data["segments"]["ab"],
+                "departure_time": "2025-01-01T10:30:00",
+                "arrival_time": "2025-01-01T11:30:00"
+            }
+        ]
+    }
+    
+    response = client.post("/api/v1/trips/conflicts/check", json=trip2_data)
+    
+    assert response.status_code == 200
+    data_response = response.json()
+    assert "conflicts" in data_response
+    assert len(data_response["conflicts"]) == 1
+    
+    conflict = data_response["conflicts"][0]
+    assert conflict["track_segment_id"] == test_data["segments"]["ab"]
+    assert conflict["conflicting_trip_id"] == trip1_id
+    assert "new_departure" in conflict
+    assert "new_arrival" in conflict
+    assert "existing_departure" in conflict
+    assert "existing_arrival" in conflict
+
+
+def test_check_conflicts_invalid_train(client, test_data):
+    """Test conflict check with non-existent train."""
+    trip_data = {
+        "train_id": 99999,  # Non-existent train
+        "segments": [
+            {
+                "track_segment_id": test_data["segments"]["ab"],
+                "departure_time": "2025-01-01T10:00:00",
+                "arrival_time": "2025-01-01T11:00:00"
+            }
+        ]
+    }
+    
+    response = client.post("/api/v1/trips/conflicts/check", json=trip_data)
+    assert response.status_code == 400
+    assert "Train with id 99999 not found" in response.json()["detail"]
+
+
+def test_check_conflicts_invalid_segment(client, test_data):
+    """Test conflict check with non-existent track segment."""
+    trip_data = {
+        "train_id": test_data["train"],
+        "segments": [
+            {
+                "track_segment_id": 99999,  # Non-existent segment
+                "departure_time": "2025-01-01T10:00:00",
+                "arrival_time": "2025-01-01T11:00:00"
+            }
+        ]
+    }
+    
+    response = client.post("/api/v1/trips/conflicts/check", json=trip_data)
+    assert response.status_code == 400
+    assert "Track segments not found" in response.json()["detail"]
+
+
+def test_check_conflicts_no_database_writes(client, test_data):
+    """Test that conflict check doesn't create any trips."""
+    # Check initial trip count
+    list_response = client.get("/api/v1/trips")
+    initial_count = len(list_response.json())
+    
+    # Check conflicts for a valid trip
+    trip_data = {
+        "train_id": test_data["train"],
+        "segments": [
+            {
+                "track_segment_id": test_data["segments"]["ab"],
+                "departure_time": "2025-01-01T10:00:00",
+                "arrival_time": "2025-01-01T11:00:00"
+            }
+        ]
+    }
+    
+    response = client.post("/api/v1/trips/conflicts/check", json=trip_data)
+    assert response.status_code == 200
+    
+    # Verify trip count hasn't changed
+    list_response = client.get("/api/v1/trips")
+    final_count = len(list_response.json())
+    assert final_count == initial_count
+
+
+def test_check_conflicts_multiple_segments(client, test_data):
+    """Test conflict check with multiple segments (one single-track, one multi-track)."""
+    # Use existing segments: ab is single-track, bc is multi-track
+    # First create a trip on the single-track segment (ab only)
+    trip1_data = {
+        "train_id": test_data["train"],
+        "segments": [
+            {
+                "track_segment_id": test_data["segments"]["ab"],  # single track
+                "departure_time": "2025-01-01T10:00:00",
+                "arrival_time": "2025-01-01T11:00:00"
+            }
+        ]
+    }
+    
+    create_response = client.post("/api/v1/trips", json=trip1_data)
+    assert create_response.status_code == 201
+    
+    # Check for conflicts using both segments (ab single-track and bc multi-track)
+    # Should only conflict on ab (single-track), not on bc (multi-track)
+    trip2_data = {
+        "train_id": test_data["train"],
+        "segments": [
+            {
+                "track_segment_id": test_data["segments"]["ab"],  # single track - will conflict
+                "departure_time": "2025-01-01T10:30:00",
+                "arrival_time": "2025-01-01T11:30:00"
+            },
+            {
+                "track_segment_id": test_data["segments"]["bc"],  # multi-track - no conflict
+                "departure_time": "2025-01-01T11:30:00",
+                "arrival_time": "2025-01-01T12:30:00"
+            }
+        ]
+    }
+    
+    response = client.post("/api/v1/trips/conflicts/check", json=trip2_data)
+    
+    assert response.status_code == 200
+    conflicts = response.json()["conflicts"]
+    assert len(conflicts) == 1  # Only single-track segment should conflict
+    assert conflicts[0]["track_segment_id"] == test_data["segments"]["ab"]
 

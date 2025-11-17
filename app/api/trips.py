@@ -19,6 +19,8 @@ from app.services.scheduling_service import (
     list_trips,
     update_trip_status,
     delete_trip,
+    find_conflicts,
+    validate_trip_references,
     ValidationError,
     ConflictError
 )
@@ -66,6 +68,39 @@ def create_scheduled_trip(trip: ScheduledTripCreate, db: Session = Depends(get_d
                 "message": str(e),
                 "conflicts": e.conflicts
             }
+        )
+
+
+@router.post("/conflicts/check")
+def check_trip_conflicts(trip: ScheduledTripCreate, db: Session = Depends(get_db)):
+    """
+    Check for scheduling conflicts without creating the trip.
+    
+    This is a planning/validation endpoint that allows checking
+    whether a proposed trip would conflict with existing schedules
+    before committing to create it.
+    
+    Returns:
+    - 200: Validation complete (with or without conflicts)
+    - 400: Invalid trip data (train or segments not found)
+    
+    Response format:
+    - No conflicts: {"conflicts": []}
+    - With conflicts: {"conflicts": [{...}, {...}]}
+    """
+    try:
+        # Validate train and track segment references
+        validate_trip_references(db, trip)
+        
+        # Check for conflicts (read-only, no DB writes)
+        conflicts = find_conflicts(db, trip)
+        
+        return {"conflicts": conflicts}
+        
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
         )
 
 
