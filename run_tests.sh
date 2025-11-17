@@ -43,20 +43,27 @@ pytest tests/test_api_segments.py -v --tb=short
 SEGMENT_RESULT=$?
 
 echo ""
+echo "Running Trip API Tests..."
+pytest tests/test_api_trips.py -v --tb=short
+TRIP_RESULT=$?
+
+echo ""
 echo "======================================"
 echo "Test Summary:"
 echo "======================================"
-echo "✓ Model Tests:        $([ $MODEL_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
-echo "✓ Schema Tests:       $([ $SCHEMA_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
-echo "✓ Health Tests:       $([ $MAIN_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
-echo "✓ Train API Tests:    $([ $TRAIN_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
-echo "✓ Station API Tests:  $([ $STATION_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
-echo "✓ Segment API Tests:  $([ $SEGMENT_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
+echo "Model Tests:        $([ $MODEL_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
+echo "Schema Tests:       $([ $SCHEMA_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
+echo "Health Tests:       $([ $MAIN_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
+echo "Train API Tests:    $([ $TRAIN_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
+echo "Station API Tests:  $([ $STATION_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
+echo "Segment API Tests:  $([ $SEGMENT_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
+echo "Trip API Tests:     $([ $TRIP_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
 echo ""
 
 # Exit with error if any test suite failed
 if [ $MODEL_RESULT -ne 0 ] || [ $SCHEMA_RESULT -ne 0 ] || [ $MAIN_RESULT -ne 0 ] || \
-   [ $TRAIN_RESULT -ne 0 ] || [ $STATION_RESULT -ne 0 ] || [ $SEGMENT_RESULT -ne 0 ]; then
+   [ $TRAIN_RESULT -ne 0 ] || [ $STATION_RESULT -ne 0 ] || [ $SEGMENT_RESULT -ne 0 ] || \
+   [ $TRIP_RESULT -ne 0 ]; then
     echo "Some tests failed"
     exit 1
 else
