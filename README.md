@@ -1,7 +1,5 @@
 # Train Scheduler API
 
-A railway scheduling system with time-based conflict detection on single-track segments. Built with FastAPI, SQLAlchemy, and SQLite.
-
 ## Overview
 
 This system manages train scheduling across a railway network, ensuring safe operations by detecting and preventing conflicts when multiple trains attempt to use single-track segments simultaneously. The core feature is **time-based conflict detection**: when scheduling a trip, the system checks if any segment of the route is a single-track section that overlaps in time with another planned or active trip. If a conflict is detected, the system returns detailed information about the conflicting trips, enabling operators to adjust schedules before committing changes.
