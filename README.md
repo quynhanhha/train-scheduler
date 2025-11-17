@@ -42,25 +42,41 @@ One leg of a trip, representing a train's use of a specific track segment with d
 ### Entity Relationship Diagram
 
 ```
-┌─────────┐                    ┌──────────────┐                    ┌─────────┐
-│ Station │◄──────────────────►│ TrackSegment │◄──────────────────►│ Station │
-└─────────┘    station_a/b     └──────────────┘    station_a/b     └─────────┘
-                                      ▲
-                                      │
-                                      │ track_segment_id (FK)
-                                      │
-┌───────┐                       ┌──────────────────┐
-│ Train │                       │ ScheduledSegment │
-└───────┘                       └──────────────────┘
-    │                                 ▲
-    │ train_id (FK)                   │
-    │                                 │ scheduled_trip_id (FK)
-    ▼                                 │
-┌──────────────┐   1:N (segments)     │
-│ScheduledTrip │──────────────────────┘
-└──────────────┘
+                          ┌─────────┐
+                          │ Station │ (PK: id)
+                          └─────────┘
+                            ▲     ▲
+                            │ 1   │ 1
+                            │     │
+         station_a_id (FK)  │     │ station_b_id (FK)
+                            │     │ 
+                            │ N   │ N
+                      ┌──────────────┐
+                      │ TrackSegment │ (PK: id)
+                      └──────────────┘
+                            ▲
+                            │ 1
+      track_segment_id (FK) │
+                            │
+                            │ N
+                    ┌──────────────────┐
+                    │ ScheduledSegment │ (PK: id)
+                    └──────────────────┘
+                            │ N
+                            │ scheduled_trip_id (FK)
+                            │
+                            ▼ 1
+                      ┌──────────────┐
+                      │ScheduledTrip │ (PK: id)
+                      └──────────────┘
+                            │ N
+                            │ train_id (FK)
+                            │
+                            ▼ 1
+                        ┌───────┐
+                        │ Train │ (PK: id)
+                        └───────┘
 ```
-
 ---
 
 ## Conflict Detection
@@ -246,11 +262,11 @@ train-scheduler/
 
 ```bash
 # Create stations
-http POST :8000/api/v1/stations name="Berlin Hbf" num_tracks=8
-http POST :8000/api/v1/stations name="Hamburg Hbf" num_tracks=6
+http POST :8000/api/v1/stations name="Southern Cross" num_tracks=16
+http POST :8000/api/v1/stations name="Flinders Street" num_tracks=12
 
 # Create a train
-http POST :8000/api/v1/trains code="ICE401" description="InterCity Express"
+http POST :8000/api/v1/trains code="MT01" description="Metro Train - Comeng Set"
 
 # Create a single-track segment
 http POST :8000/api/v1/segments \
@@ -289,7 +305,7 @@ http POST :8000/api/v1/trips/conflicts/check \
 # Create a station
 curl -X POST http://localhost:8000/api/v1/stations \
   -H "Content-Type: application/json" \
-  -d '{"name": "Berlin Hbf", "num_tracks": 8}'
+  -d '{"name": "Southern Cross", "num_tracks": 16}'
 
 # Create a trip
 curl -X POST http://localhost:8000/api/v1/trips \
