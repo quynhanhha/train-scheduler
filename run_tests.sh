@@ -48,6 +48,11 @@ pytest tests/test_api_trips.py -v --tb=short
 TRIP_RESULT=$?
 
 echo ""
+echo "Running Conflict Detection Tests..."
+pytest tests/test_conflicts.py -v --tb=short
+CONFLICT_RESULT=$?
+
+echo ""
 echo "======================================"
 echo "Test Summary:"
 echo "======================================"
@@ -58,12 +63,13 @@ echo "Train API Tests:    $([ $TRAIN_RESULT -eq 0 ] && echo 'PASSED' || echo 'FA
 echo "Station API Tests:  $([ $STATION_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
 echo "Segment API Tests:  $([ $SEGMENT_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
 echo "Trip API Tests:     $([ $TRIP_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
+echo "Conflict Tests:     $([ $CONFLICT_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
 echo ""
 
 # Exit with error if any test suite failed
 if [ $MODEL_RESULT -ne 0 ] || [ $SCHEMA_RESULT -ne 0 ] || [ $MAIN_RESULT -ne 0 ] || \
    [ $TRAIN_RESULT -ne 0 ] || [ $STATION_RESULT -ne 0 ] || [ $SEGMENT_RESULT -ne 0 ] || \
-   [ $TRIP_RESULT -ne 0 ]; then
+   [ $TRIP_RESULT -ne 0 ] || [ $CONFLICT_RESULT -ne 0 ]; then
     echo "Some tests failed"
     exit 1
 else

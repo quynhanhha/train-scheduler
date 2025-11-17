@@ -19,7 +19,8 @@ from app.services.scheduling_service import (
     list_trips,
     update_trip_status,
     delete_trip,
-    ValidationError
+    ValidationError,
+    ConflictError
 )
 
 
@@ -39,6 +40,12 @@ def create_scheduled_trip(trip: ScheduledTripCreate, db: Session = Depends(get_d
     - Train exists
     - All track segments exist
     - Times are valid and chronologically ordered
+    - No conflicts on single-track segments
+    
+    Returns:
+    - 201: Trip created successfully
+    - 400: Validation error (bad request)
+    - 409: Scheduling conflict detected on single-track segment
     """
     try:
         db_trip = create_trip(db, trip)
@@ -51,6 +58,14 @@ def create_scheduled_trip(trip: ScheduledTripCreate, db: Session = Depends(get_d
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
+        )
+    except ConflictError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": str(e),
+                "conflicts": e.conflicts
+            }
         )
 
 
