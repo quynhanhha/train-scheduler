@@ -8,7 +8,7 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///./train_scheduler.db"
 # Create engine
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, 
-    connect_args={"check_same_thread": False}  # Needed for SQLite
+    connect_args={"check_same_thread": False} 
 )
 
 # Create SessionLocal class
